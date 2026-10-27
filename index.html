@@ -400,7 +400,11 @@ $('#rStop').onclick=()=>{
 (function(){const sen=document.createElement('div');sen.style.cssText='position:fixed;left:0;top:0;width:1px;height:100%;pointer-events:none;opacity:0';document.body.appendChild(sen);
 const th=[];for(let i=0;i<=200;i++)th.push(i/200);
 const R=document.documentElement.style;
-try{new IntersectionObserver(es=>{const r=es[es.length-1].intersectionRect;if(r.height>120){R.setProperty('--u',(r.height/100)+'px');R.setProperty('--vt',Math.max(0,r.top)+'px')}},{threshold:th}).observe(sen)}catch(e){}})();
+function setH(h,t){if(h>120){R.setProperty('--u',(h/100)+'px');R.setProperty('--vt',Math.max(0,t)+'px')}}
+let io=null;try{io=new IntersectionObserver(es=>{const r=es[es.length-1].intersectionRect;setH(Math.min(r.height||innerHeight,innerHeight),r.top)},{threshold:th})}catch(e){}
+function measure(){setH(innerHeight,0);if(io){io.unobserve(sen);io.observe(sen)}}
+measure();addEventListener('resize',measure);addEventListener('orientationchange',()=>setTimeout(measure,300));
+if(window.visualViewport)visualViewport.addEventListener('resize',measure);})();
 renderHome();
 </script>
 
