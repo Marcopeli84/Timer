@@ -136,6 +136,11 @@ h1 span{color:var(--work)}
 .step output{min-width:64px;font-size:1.45rem}
 .namefield{font-size:1.3rem;padding:10px 12px}
 .fields{margin-block:10px}
+.inst{display:flex;align-items:center;gap:12px;background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:12px 12px 12px 14px;margin-bottom:14px}
+.inst img{width:44px;height:44px;border-radius:10px;flex-shrink:0}
+.inst p{margin:0;flex:1;min-width:0;font-size:.92rem;line-height:1.35}
+.inst .btn{padding:10px 14px}
+.inst .cl{width:32px;height:32px;color:var(--muted);flex-shrink:0}
 #flash{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:30}
 #flash.on{animation:fl .45s ease-out}
 @keyframes fl{0%{opacity:.9}100%{opacity:0}}
@@ -150,6 +155,12 @@ h1 span{color:var(--work)}
   </header>
 
   <section id="v-home">
+    <div class="inst" id="inst" hidden>
+      <img src="icon-192.png" alt="">
+      <p id="instTxt"></p>
+      <button class="btn primary" id="instBtn" hidden>Installa</button>
+      <button class="cl" id="instX" aria-label="Chiudi">✕</button>
+    </div>
     <div class="tabs" role="tablist">
       <button role="tab" id="tab-timers" aria-selected="true" data-tab="timers">Timer</button>
       <button role="tab" id="tab-hist" aria-selected="false" data-tab="hist">Cronologia</button>
@@ -409,6 +420,21 @@ let io=null;try{io=new IntersectionObserver(es=>{const r=es[es.length-1].interse
 function measure(){setH(innerHeight,0);if(io){io.unobserve(sen);io.observe(sen)}}
 measure();addEventListener('resize',measure);addEventListener('orientationchange',()=>setTimeout(measure,300));
 if(window.visualViewport)visualViewport.addEventListener('resize',measure);})();
+/* installazione come app */
+(function(){
+  if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+  const standalone=matchMedia('(display-mode: standalone)').matches||navigator.standalone;
+  let off=false;try{off=localStorage.getItem('inst_off')==='1'}catch(e){}
+  if(standalone||off)return;
+  const box=$('#inst'),txt=$('#instTxt'),btn=$('#instBtn');
+  $('#instX').onclick=()=>{box.hidden=true;try{localStorage.setItem('inst_off','1')}catch(e){}};
+  const ios=/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  if(ios){txt.innerHTML='Installala come app: tocca <b>Condividi</b> e poi <b>Aggiungi alla schermata Home</b>.';box.hidden=false;return}
+  let ev=null;
+  addEventListener('beforeinstallprompt',e=>{e.preventDefault();ev=e;txt.textContent='Installa Timer come app sul tuo dispositivo.';btn.hidden=false;box.hidden=false});
+  btn.onclick=async()=>{if(!ev)return;ev.prompt();try{await ev.userChoice}catch(e){}ev=null;box.hidden=true};
+  addEventListener('appinstalled',()=>box.hidden=true);
+})();
 renderHome();
 </script>
 
