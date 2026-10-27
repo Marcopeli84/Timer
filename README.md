@@ -8,6 +8,6 @@ Timer a intervalli per HIIT, Tabata, EMOM e boxe, pensato per iPhone.
 - Pausa, salto avanti/indietro, cronologia allenamenti
 - Schermo sempre acceso durante l'allenamento, layout verticale e orizzontale
 
-**Apri:** https://marcopeli84.github.io/timer/
+**Apri:** https://marcopeli84.github.io/Timer/
 
 Su iPhone: Safari → Condividi → Aggiungi alla schermata Home.
