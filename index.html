@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f1214">
+<style>*{box-sizing:border-box}body{margin:0}:root{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}[hidden]{display:none!important}</style>
+<title>Timer Intervalli</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
+<style>
+/* Layout: lista timer → editor a stepper → schermo intero colorato per fase */
+:root{
+  --bg:#0f1214; --panel:#171c20; --panel2:#1e252a; --line:#2a3238;
+  --text:#eef1f2; --muted:#8b979e;
+  --prep:#f2b53a; --work:#ff4b3a; --rest:#17b3a1; --long:#4c79ff; --cool:#8b6cf0;
+  --display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"Barlow",system-ui,-apple-system,sans-serif;
+  color-scheme:dark;--u:1vh;--vt:0px;
+}
+html,body{height:100%}
+body{background:var(--bg);color:var(--text);font-family:var(--body);font-size:16px;-webkit-tap-highlight-color:transparent;overscroll-behavior:none}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;touch-action:manipulation}
+button:focus-visible{outline:2px solid var(--prep);outline-offset:2px}
+.wrap{max-width:560px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 32px}
+header.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:8px 14px}
+h1{font-family:var(--display);font-weight:700;font-size:2rem;letter-spacing:.02em;text-transform:uppercase;margin:0;line-height:1}
+h1 span{color:var(--work)}
+.tabs{display:flex;background:var(--panel);border-radius:12px;padding:4px;gap:4px;margin-bottom:16px}
+.tabs button{flex:1;padding:10px 6px;border-radius:9px;font-weight:600;font-size:.92rem;color:var(--muted)}
+.tabs button[aria-selected="true"]{background:var(--panel2);color:var(--text)}
+.list{display:flex;flex-direction:column;gap:10px}
+.card{display:flex;align-items:stretch;background:var(--panel);border-radius:14px;overflow:hidden;border:1px solid var(--line)}
+.card .info{flex:1;min-width:0;text-align:left;padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.card .name{font-family:var(--display);font-weight:600;font-size:1.45rem;text-transform:uppercase;letter-spacing:.02em;line-height:1.05;overflow-wrap:anywhere}
+.card .sum{color:var(--muted);font-size:.9rem;font-variant-numeric:tabular-nums}
+.strip{display:flex;height:5px;border-radius:3px;overflow:hidden;gap:1px;background:var(--bg)}
+.strip i{display:block;min-width:1px}
+.card .go{width:84px;flex-shrink:0;background:var(--work);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:#fff;font-family:var(--display);font-weight:700;font-size:1.25rem;font-variant-numeric:tabular-nums}
+.card .go svg{width:26px;height:26px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:14px 18px;border-radius:12px;font-weight:600;background:var(--panel2);border:1px solid var(--line)}
+.btn.primary{background:var(--work);border-color:var(--work);color:#fff}
+.btn.danger{color:var(--work)}
+.btn.wide{width:100%}
+.row-btns{display:flex;gap:10px;flex-wrap:wrap}
+.row-btns .btn{flex:1;min-width:120px}
+.muted{color:var(--muted)}
+.small{font-size:.85rem}
+/* editor */
+.namefield{width:100%;box-sizing:border-box;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;color:var(--text);font-family:var(--display);font-weight:600;font-size:1.5rem;text-transform:uppercase;letter-spacing:.02em}
+.namefield:focus{outline:2px solid var(--prep);outline-offset:0}
+.fields{display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:14px;margin-block:12px}
+.field{display:grid;grid-template-columns:10px 1fr auto;align-items:center;gap:12px;padding:10px 12px 10px 16px;border-top:1px solid var(--line)}
+.field:first-child{border-top:0}
+.dot{width:10px;height:10px;border-radius:50%}
+.field label{font-weight:500}
+.step{display:flex;align-items:center;gap:4px}
+.step button{width:44px;height:44px;border-radius:10px;background:var(--panel2);font-size:1.5rem;line-height:1;user-select:none;-webkit-user-select:none}
+.step output{min-width:70px;text-align:center;font-family:var(--display);font-weight:600;font-size:1.6rem;font-variant-numeric:tabular-nums}
+.total{display:flex;justify-content:space-between;align-items:baseline;padding:4px 2px 8px}
+.total b{font-family:var(--display);font-size:2.2rem;font-weight:700;font-variant-numeric:tabular-nums}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.8rem;color:var(--muted);margin:8px 0 16px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend .dot{width:8px;height:8px}
+/* storico e opzioni */
+.hist{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:12px 16px;background:var(--panel);border:1px solid var(--line);border-radius:12px}
+.hist .t{font-weight:600}
+.hist .d{font-family:var(--display);font-size:1.3rem;font-weight:600;font-variant-numeric:tabular-nums;text-align:right}
+.badge{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;font-weight:600}
+.ok{color:var(--rest)} .ko{color:var(--prep)}
+.opt{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 16px;border-top:1px solid var(--line)}
+.opt:first-child{border-top:0}
+.sw{width:52px;height:32px;border-radius:16px;background:var(--line);position:relative;flex-shrink:0;transition:background .2s}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:50%;background:#fff;transition:transform .2s}
+.sw[aria-checked="true"]{background:var(--rest)}
+.sw[aria-checked="true"]::after{transform:translateX(20px)}
+.empty{padding:28px 16px;text-align:center;color:var(--muted);background:var(--panel);border-radius:12px;border:1px dashed var(--line)}
+/* schermo di esecuzione */
+#run{position:fixed;left:0;right:0;top:var(--vt);z-index:20;display:flex;flex-direction:column;--ph:var(--prep);--fg:#1b1405;background:var(--ph);color:var(--fg);transition:background .25s;
+  padding:calc(env(safe-area-inset-top,0px) + 12px) max(16px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 16px) max(16px,env(safe-area-inset-left,0px))}
+#run[data-ph="work"]{--ph:var(--work);--fg:#fff}
+#run[data-ph="rest"]{--ph:var(--rest);--fg:#04201d}
+#run[data-ph="long"]{--ph:var(--long);--fg:#fff}
+#run[data-ph="cool"]{--ph:var(--cool);--fg:#fff}
+#run[data-ph="done"]{--ph:#14191c;--fg:var(--text)}
+#run[data-paused="1"] .big{opacity:.55}
+#run{display:grid;grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr) auto auto auto;grid-template-areas:"top" "mid" "bar" "info" "ctrls";overflow:hidden;height:100vh;height:calc(100*var(--u));box-sizing:border-box}
+#run[hidden]{display:none}
+.rtop{grid-area:top}.rmid{grid-area:mid}.bar{grid-area:bar}.rinfo{grid-area:info}.ctrls{grid-area:ctrls}
+.rtop{display:flex;justify-content:space-between;align-items:center;gap:10px;font-family:var(--display);font-weight:600;font-size:1.15rem;text-transform:uppercase;letter-spacing:.04em}
+.rtop .x{width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.15);display:flex;align-items:center;justify-content:center;font-size:.85rem;letter-spacing:0;text-transform:none}
+.rtop .x.arm{width:auto;padding:0 14px;border-radius:22px;background:rgba(0,0,0,.35);color:#fff}
+.rmid{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:0}
+.phase{font-family:var(--display);font-weight:700;font-size:min(11vw,7vh,4.5rem);font-size:min(11vw,calc(7*var(--u)),4.5rem);text-transform:uppercase;letter-spacing:.04em;line-height:1}
+.big{font-family:var(--display);font-weight:700;font-size:min(36vw,28vh,17rem);font-size:min(36vw,calc(28*var(--u)),17rem);line-height:.9;font-variant-numeric:tabular-nums;letter-spacing:-.01em;transition:opacity .2s}
+.counts{display:flex;gap:28px;justify-content:center;margin-top:10px}
+.counts div{display:flex;flex-direction:column;align-items:center}
+.counts small{font-size:.75rem;text-transform:uppercase;letter-spacing:.12em;font-weight:600;opacity:.75}
+.counts b{font-family:var(--display);font-size:min(2.4rem,calc(6*var(--u)));font-weight:700;font-variant-numeric:tabular-nums;line-height:1}
+.next{margin-top:14px;font-weight:600;opacity:.8;font-variant-numeric:tabular-nums}
+.bar{height:8px;border-radius:4px;background:rgba(0,0,0,.18);overflow:hidden;margin-bottom:6px}
+.bar i{display:block;height:100%;background:currentColor;opacity:.85;width:0}
+.rinfo{display:flex;justify-content:space-between;font-size:.9rem;font-weight:600;font-variant-numeric:tabular-nums;opacity:.85;margin-bottom:14px}
+.ctrls{display:flex;justify-content:center;align-items:center;gap:28px}
+.ctrls button{width:64px;height:64px;border-radius:50%;background:rgba(0,0,0,.15);display:flex;align-items:center;justify-content:center}
+.ctrls button svg{width:28px;height:28px;fill:currentColor}
+.ctrls .pp{width:92px;height:92px;background:var(--fg);color:var(--ph)}
+.ctrls .pp svg{width:40px;height:40px}
+.ctrls{gap:min(28px,5vw)}
+.ctrls button{width:min(64px,calc(9*var(--u)));height:min(64px,calc(9*var(--u)))}
+.ctrls .pp{width:min(92px,calc(13*var(--u)));height:min(92px,calc(13*var(--u)))}
+.next{margin-top:min(14px,calc(1.5*var(--u)))}
+.counts{margin-top:min(10px,calc(1*var(--u)))}
+/* orizzontale: tempo a sinistra, comandi in colonna a destra */
+@media (orientation:landscape) and (min-aspect-ratio:4/3){
+  #run{grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto minmax(0,1fr) auto auto;grid-template-areas:"top top" "mid ctrls" "bar bar" "info info";column-gap:20px;padding-top:calc(env(safe-area-inset-top,0px) + 6px);padding-bottom:calc(env(safe-area-inset-bottom,0px) + 8px)}
+  .ctrls{flex-direction:column;gap:calc(3*var(--u));align-self:center}
+  .ctrls button{width:min(56px,calc(15*var(--u)));height:min(56px,calc(15*var(--u)))}
+  .ctrls .pp{width:min(84px,calc(22*var(--u)));height:min(84px,calc(22*var(--u)))}
+  .phase{font-size:min(8vw,calc(11*var(--u)))}
+  .big{font-size:min(30vw,calc(44*var(--u)))}
+  .counts b{font-size:min(2.2rem,calc(9*var(--u)))}
+  .counts small{font-size:.65rem}
+  .next{font-size:.85rem}
+  .rinfo{margin-bottom:0}
+}
+/* editor e lista più compatti per stare in uno schermo */
+.field{padding-block:6px}
+.step button{width:40px;height:40px}
+.step output{min-width:64px;font-size:1.45rem}
+.namefield{font-size:1.3rem;padding:10px 12px}
+.fields{margin-block:10px}
+#flash{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:30}
+#flash.on{animation:fl .45s ease-out}
+@keyframes fl{0%{opacity:.9}100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){#flash.on{animation:none}#run{transition:none}}
+</style>
+
+</head>
+<body>
+<div class="wrap" id="app">
+  <header class="top">
+    <h1>Timer <span>Intervalli</span></h1>
+  </header>
+
+  <section id="v-home">
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tab-timers" aria-selected="true" data-tab="timers">Timer</button>
+      <button role="tab" id="tab-hist" aria-selected="false" data-tab="hist">Cronologia</button>
+      <button role="tab" id="tab-opt" aria-selected="false" data-tab="opt">Opzioni</button>
+    </div>
+    <div id="p-timers">
+      <div class="list" id="timers"></div>
+      <div style="height:12px"></div>
+      <button class="btn wide" id="newBtn">+ Nuovo timer</button>
+    </div>
+    <div id="p-hist" hidden>
+      <div class="list" id="hist"></div>
+      <div style="height:12px"></div>
+      <button class="btn wide danger" id="clrHist">Cancella cronologia</button>
+    </div>
+    <div id="p-opt" hidden>
+      <div class="fields" id="opts"></div>
+      <p class="muted small">Tieni l'app aperta durante l'allenamento: lo schermo resta acceso da solo. Con il telefono bloccato iOS sospende suoni e voce, ma il tempo resta giusto quando riapri.</p>
+      <p class="muted small">Per averla come app: in Safari tocca Condividi → Aggiungi alla schermata Home.</p>
+    </div>
+  </section>
+
+  <section id="v-edit" hidden>
+    <input class="namefield" id="eName" maxlength="40" aria-label="Nome del timer">
+    <div class="fields" id="eFields"></div>
+    <div class="total"><span class="muted">Durata totale</span><b id="eTotal">0:00</b></div>
+    <div class="strip" id="eStrip" style="height:10px"></div>
+    <div class="legend">
+      <span><i class="dot" style="background:var(--prep)"></i>Preparazione</span>
+      <span><i class="dot" style="background:var(--work)"></i>Lavoro</span>
+      <span><i class="dot" style="background:var(--rest)"></i>Riposo</span>
+      <span><i class="dot" style="background:var(--long)"></i>Tra cicli</span>
+      <span><i class="dot" style="background:var(--cool)"></i>Defaticamento</span>
+    </div>
+    <div class="row-btns">
+      <button class="btn primary" id="eStart">Avvia</button>
+      <button class="btn" id="eSave">Salva</button>
+    </div>
+    <div style="height:10px"></div>
+    <div class="row-btns">
+      <button class="btn" id="eBack">Indietro</button>
+      <button class="btn" id="eDup">Duplica</button>
+      <button class="btn danger" id="eDel">Elimina</button>
+    </div>
+  </section>
+</div>
+
+<section id="run" hidden>
+  <div class="rtop">
+    <span id="rName"></span>
+    <button class="x" id="rStop" aria-label="Termina">✕</button>
+  </div>
+  <div class="rmid">
+    <div class="phase" id="rPhase"></div>
+    <div class="big" id="rTime">0:00</div>
+    <div class="counts">
+      <div><small>Round</small><b id="rRound">1/1</b></div>
+      <div id="rCycWrap"><small>Ciclo</small><b id="rCycle">1/1</b></div>
+    </div>
+    <div class="next" id="rNext"></div>
+  </div>
+  <div class="bar"><i id="rBar"></i></div>
+  <div class="rinfo"><span id="rEl">0:00</span><span id="rLeft">-0:00</span></div>
+  <div class="ctrls">
+    <button id="rPrev" aria-label="Fase precedente"><svg viewBox="0 0 24 24"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg></button>
+    <button class="pp" id="rPP" aria-label="Pausa"><svg viewBox="0 0 24 24" id="ppIcon"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg></button>
+    <button id="rNextB" aria-label="Fase successiva"><svg viewBox="0 0 24 24"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg></button>
+  </div>
+</section>
+<div id="flash"></div>
+
+<script>
+const $=s=>document.querySelector(s);
+const KEY='timer_intervalli_v1';
+const PH={prep:'Preparati',work:'Lavoro',rest:'Riposo',long:'Riposo lungo',cool:'Defaticamento'};
+const COL={prep:'var(--prep)',work:'var(--work)',rest:'var(--rest)',long:'var(--long)',cool:'var(--cool)'};
+const uid=()=>Math.random().toString(36).slice(2,9);
+const DEF=[
+ {name:'Tabata',prep:10,work:20,rest:10,rounds:8,cycles:1,cycleRest:60,cool:0},
+ {name:'HIIT 40/20',prep:10,work:40,rest:20,rounds:8,cycles:3,cycleRest:90,cool:0},
+ {name:'EMOM 12',prep:10,work:60,rest:0,rounds:12,cycles:1,cycleRest:0,cool:0},
+ {name:'Boxe 3 × 3′',prep:10,work:180,rest:60,rounds:3,cycles:1,cycleRest:0,cool:0}
+].map(t=>({id:uid(),...t}));
+let S={timers:DEF,history:[],settings:{voice:true,beep:true,flash:true}};
+try{const r=JSON.parse(localStorage.getItem(KEY));if(r&&r.timers)S={...S,...r,settings:{...S.settings,...(r.settings||{})}}}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+
+function fmt(s){s=Math.max(0,Math.round(s));const h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;return h?`${h}:${String(m).padStart(2,'0')}:${String(x).padStart(2,'0')}`:`${m}:${String(x).padStart(2,'0')}`}
+function sec(s){return s<60?s+'″':fmt(s)}
+
+function segs(t){
+  const a=[];
+  if(t.prep>0)a.push({type:'prep',dur:t.prep,r:0,c:0});
+  for(let c=1;c<=t.cycles;c++)for(let r=1;r<=t.rounds;r++){
+    a.push({type:'work',dur:t.work,r,c});
+    if(r<t.rounds){if(t.rest>0)a.push({type:'rest',dur:t.rest,r,c})}
+    else if(c<t.cycles){if(t.cycleRest>0)a.push({type:'long',dur:t.cycleRest,r,c});else if(t.rest>0)a.push({type:'rest',dur:t.rest,r,c})}
+  }
+  if(t.cool>0)a.push({type:'cool',dur:t.cool,r:t.rounds,c:t.cycles});
+  return a;
+}
+const total=t=>segs(t).reduce((s,x)=>s+x.dur,0);
+function strip(el,t){el.innerHTML=segs(t).map(s=>`<i style="flex:${s.dur};background:${COL[s.type]}"></i>`).join('')}
+function summary(t){let s=`${sec(t.work)} lavoro`;if(t.rest)s+=` / ${sec(t.rest)} riposo`;s+=` × ${t.rounds}`;if(t.cycles>1)s+=` · ${t.cycles} cicli`;return s}
+
+/* ---------- home ---------- */
+function renderHome(){
+  const L=$('#timers');
+  L.innerHTML=S.timers.length?'':'<div class="empty">Nessun timer. Creane uno nuovo.</div>';
+  S.timers.forEach(t=>{
+    const c=document.createElement('div');c.className='card';
+    c.innerHTML=`<button class="info" aria-label="Modifica ${t.name}"><span class="name"></span><span class="sum">${summary(t)}</span><span class="strip"></span></button>
+      <button class="go" aria-label="Avvia"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4v16l13-8z"/></svg>${fmt(total(t))}</button>`;
+    c.querySelector('.name').textContent=t.name;
+    strip(c.querySelector('.strip'),t);
+    c.querySelector('.info').onclick=()=>openEdit(t.id);
+    c.querySelector('.go').onclick=()=>start(t);
+    L.appendChild(c);
+  });
+  const H=$('#hist');
+  H.innerHTML=S.history.length?'':'<div class="empty">Qui compariranno gli allenamenti svolti.</div>';
+  S.history.slice().reverse().forEach(h=>{
+    const d=new Date(h.at);
+    const e=document.createElement('div');e.className='hist';
+    e.innerHTML=`<span class="t"></span><span class="d">${fmt(h.done)}</span>
+     <span class="muted small">${d.toLocaleDateString('it-IT',{weekday:'short',day:'numeric',month:'short'})} · ${d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}</span>
+     <span class="badge ${h.complete?'ok':'ko'}">${h.complete?'Completato':'Interrotto'}</span>`;
+    e.querySelector('.t').textContent=h.name;H.appendChild(e);
+  });
+  const O=$('#opts');O.innerHTML='';
+  [['voice','Guida vocale'],['beep','Segnali acustici'],['flash','Lampeggio a cambio fase']].forEach(([k,l])=>{
+    const r=document.createElement('div');r.className='opt';
+    r.innerHTML=`<span>${l}</span><button class="sw" role="switch" id="opt-${k}" aria-checked="${S.settings[k]}" aria-label="${l}"></button>`;
+    r.querySelector('button').onclick=e=>{S.settings[k]=!S.settings[k];e.currentTarget.setAttribute('aria-checked',S.settings[k]);save()};
+    O.appendChild(r);
+  });
+}
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.tabs button').forEach(x=>x.setAttribute('aria-selected',x===b));
+  ['timers','hist','opt'].forEach(p=>$('#p-'+p).hidden=p!==b.dataset.tab);
+});
+function twoTap(btn,label,fn){let armed=false,to;btn.onclick=()=>{if(armed){clearTimeout(to);armed=false;btn.textContent=btn.dataset.l;fn();return}
+  btn.dataset.l=btn.dataset.l||btn.textContent;armed=true;btn.textContent=label;to=setTimeout(()=>{armed=false;btn.textContent=btn.dataset.l},3000)}}
+twoTap($('#clrHist'),'Tocca ancora per confermare',()=>{S.history=[];save();renderHome()});
+
+/* ---------- editor ---------- */
+const FIELDS=[['prep','Preparazione','t',0,'prep'],['work','Lavoro','t',1,'work'],['rest','Riposo','t',0,'rest'],['rounds','Round','n',1,'work'],['cycles','Cicli','n',1,'long'],['cycleRest','Riposo tra cicli','t',0,'long'],['cool','Defaticamento','t',0,'cool']];
+let D=null,editId=null;
+function openEdit(id){
+  editId=id;const t=S.timers.find(x=>x.id===id);
+  D=t?{...t}:{name:'Nuovo timer',prep:10,work:30,rest:15,rounds:8,cycles:1,cycleRest:60,cool:0};
+  $('#eName').value=D.name;$('#eDel').hidden=!t;$('#eDup').hidden=!t;
+  const F=$('#eFields');F.innerHTML='';
+  FIELDS.forEach(([k,l,ty,min,c])=>{
+    const r=document.createElement('div');r.className='field';
+    r.innerHTML=`<i class="dot" style="background:${COL[c]}"></i><label for="f-${k}">${l}</label>
+     <div class="step"><button aria-label="Meno">−</button><output id="f-${k}"></output><button aria-label="Più">+</button></div>`;
+    const out=r.querySelector('output'),[mi,pl]=r.querySelectorAll('button');
+    const show=()=>{out.textContent=ty==='t'?fmt(D[k]):D[k];refreshEdit()};
+    const step=dir=>{const v=D[k];let s=1;if(ty==='t')s=v<60||(v===60&&dir<0)?5:v<300||(v===300&&dir<0)?15:30;D[k]=Math.min(ty==='t'?5999:99,Math.max(min,v+dir*s));show()};
+    hold(mi,()=>step(-1));hold(pl,()=>step(1));show();F.appendChild(r);
+  });
+  $('#v-home').hidden=true;$('#v-edit').hidden=false;window.scrollTo(0,0);
+}
+function hold(btn,fn){let t1,t2;const stop=()=>{clearTimeout(t1);clearInterval(t2)};
+  btn.addEventListener('pointerdown',e=>{e.preventDefault();fn();t1=setTimeout(()=>t2=setInterval(fn,90),400)});
+  ['pointerup','pointerleave','pointercancel'].forEach(ev=>btn.addEventListener(ev,stop));
+  btn.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();fn()}});
+}
+function refreshEdit(){$('#eTotal').textContent=fmt(total(D));strip($('#eStrip'),D)}
+$('#eName').oninput=e=>D.name=e.target.value;
+function commit(){D.name=(D.name||'').trim()||'Timer';if(editId){Object.assign(S.timers.find(x=>x.id===editId),D)}else{D.id=uid();S.timers.push(D);editId=D.id}save();return S.timers.find(x=>x.id===editId)}
+function home(){$('#v-edit').hidden=true;$('#v-home').hidden=false;renderHome()}
+$('#eSave').onclick=()=>{commit();home()};
+$('#eStart').onclick=()=>{const t=commit();home();start(t)};
+$('#eBack').onclick=home;
+$('#eDup').onclick=()=>{const n={...D,id:uid(),name:D.name+' (copia)'};S.timers.push(n);save();openEdit(n.id)};
+twoTap($('#eDel'),'Conferma',()=>{S.timers=S.timers.filter(x=>x.id!==editId);save();home()});
+$('#newBtn').onclick=()=>openEdit(null);
+
+/* ---------- audio e voce ---------- */
+let ac=null;
+function beep(f=880,d=.12,n=1){if(!S.settings.beep||!ac)return;for(let i=0;i<n;i++){const t=ac.currentTime+i*(d+.08),o=ac.createOscillator(),g=ac.createGain();o.type='square';o.frequency.value=f;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.25,t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g).connect(ac.destination);o.start(t);o.stop(t+d+.02)}}
+function say(txt){if(!S.settings.voice||!('speechSynthesis' in window))return;try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(txt);u.lang='it-IT';u.rate=1.05;speechSynthesis.speak(u)}catch(e){}}
+function flash(){if(!S.settings.flash)return;const f=$('#flash');f.classList.remove('on');void f.offsetWidth;f.classList.add('on')}
+let wl=null;async function wake(){try{if('wakeLock' in navigator)wl=await navigator.wakeLock.request('screen')}catch(e){}}
+document.addEventListener('visibilitychange',()=>{if(R&&!document.hidden)wake()});
+
+/* ---------- motore ---------- */
+let R=null,iv=null;
+const now=()=>performance.now();
+function start(t){
+  try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();ac.resume()}catch(e){}
+  const sg=segs(t);if(!sg.length)return;
+  let acc=0;const st=sg.map(s=>{const a=acc;acc+=s.dur*1000;return a});
+  R={t,sg,st,tot:acc,acc:0,res:now(),paused:false,idx:-1,sec:null};
+  $('#rName').textContent=t.name;$('#rCycWrap').hidden=t.cycles<2;
+  $('#run').hidden=false;$('#run').dataset.paused='0';ppIcon(false);resetStop();
+  wake();tick();clearInterval(iv);iv=setInterval(tick,100);
+}
+const el=()=>R.acc+(R.paused?0:now()-R.res);
+function seekTo(ms){R.acc=Math.max(0,ms);R.res=now();R.idx=-2;tick()}
+function tick(){
+  if(!R)return;const e=el();
+  if(e>=R.tot)return finish(true);
+  let i=R.st.length-1;while(i>0&&R.st[i]>e)i--;
+  const s=R.sg[i],segEnd=R.st[i]+s.dur*1000,left=Math.ceil((segEnd-e)/1000);
+  if(i!==R.idx){
+    const first=R.idx===-1;R.idx=i;R.sec=left;
+    if(!first||true){flash();beep(s.type==='work'?1320:660,.35)}
+    let v=PH[s.type];
+    if(s.type==='work'){v=s.r===R.t.rounds&&s.c===R.t.cycles?'Ultimo round':`Round ${s.r}`}
+    if(s.type==='long')v=`Riposo lungo. Prossimo ciclo ${s.c+1}`;
+    say(v);
+  }else if(left!==R.sec){R.sec=left;if(left<=3&&left>=1&&s.dur>=5)beep(880,.1);
+    if(s.type==='work'&&s.dur>=30&&left===Math.floor(s.dur/2)&&s.dur%2===0)say('Metà')}
+  draw(e,i,s,segEnd);
+}
+function draw(e,i,s,segEnd){
+  const run=$('#run');run.dataset.ph=s.type;
+  $('#rPhase').textContent=PH[s.type];
+  $('#rTime').textContent=fmt(Math.ceil((segEnd-e)/1000));
+  $('#rRound').textContent=s.type==='prep'?`0/${R.t.rounds}`:`${s.r}/${R.t.rounds}`;
+  $('#rCycle').textContent=`${Math.max(1,s.c)}/${R.t.cycles}`;
+  const n=R.sg[i+1];$('#rNext').textContent=n?`Poi: ${PH[n.type]} ${fmt(n.dur)}`:'Ultima fase';
+  $('#rBar').style.width=(e/R.tot*100).toFixed(2)+'%';
+  $('#rEl').textContent=fmt(e/1000);$('#rLeft').textContent='-'+fmt((R.tot-e)/1000);
+}
+function finish(complete){
+  clearInterval(iv);if(!R)return;
+  const done=Math.min(el(),R.tot)/1000;
+  if(done>=5){S.history.push({name:R.t.name,at:Date.now(),done:Math.round(done),complete});if(S.history.length>300)S.history.shift();save()}
+  if(complete){beep(1320,.2,3);say('Allenamento completato');flash();
+    const run=$('#run');run.dataset.ph='done';$('#rPhase').textContent='Fatto!';$('#rTime').textContent=fmt(R.tot/1000);$('#rNext').textContent='Tocca ✕ per tornare ai timer';$('#rBar').style.width='100%';$('#rLeft').textContent='-0:00';
+    R=null;exitArmed=true;$('#rStop').classList.remove('arm');$('#rStop').textContent='✕';renderHome();return}
+  R=null;closeRun();
+}
+function closeRun(){$('#run').hidden=true;try{wl&&wl.release()}catch(e){}wl=null;try{speechSynthesis.cancel()}catch(e){}renderHome()}
+function ppIcon(p){$('#ppIcon').innerHTML=p?'<path d="M7 4v16l13-8z"/>':'<path d="M6 5h4v14H6zM14 5h4v14h-4z"/>';$('#rPP').setAttribute('aria-label',p?'Riprendi':'Pausa')}
+$('#rPP').onclick=()=>{if(!R)return;if(R.paused){R.paused=false;R.res=now();say('Via')}else{R.acc=el();R.paused=true;say('Pausa')}$('#run').dataset.paused=R.paused?'1':'0';ppIcon(R.paused);tick()};
+$('#rNextB').onclick=()=>{if(!R)return;const i=R.idx;if(i+1<R.sg.length)seekTo(R.st[i+1]);else seekTo(R.tot)};
+$('#rPrev').onclick=()=>{if(!R)return;const i=R.idx,into=el()-R.st[i];seekTo(into>2000||i===0?R.st[i]:R.st[i-1])};
+let exitArmed=false,stopTo;
+function resetStop(){exitArmed=false;clearTimeout(stopTo);const b=$('#rStop');b.classList.remove('arm');b.textContent='✕'}
+$('#rStop').onclick=()=>{
+  if(!R){closeRun();return}
+  const b=$('#rStop');
+  if(b.classList.contains('arm')){resetStop();finish(false);return}
+  b.classList.add('arm');b.textContent='Tocca per terminare';stopTo=setTimeout(resetStop,3000);
+};
+/* misura la parte di pagina davvero visibile (anche dentro la cornice di claude.ai) */
+(function(){const sen=document.createElement('div');sen.style.cssText='position:fixed;left:0;top:0;width:1px;height:100%;pointer-events:none;opacity:0';document.body.appendChild(sen);
+const th=[];for(let i=0;i<=200;i++)th.push(i/200);
+const R=document.documentElement.style;
+try{new IntersectionObserver(es=>{const r=es[es.length-1].intersectionRect;if(r.height>120){R.setProperty('--u',(r.height/100)+'px');R.setProperty('--vt',Math.max(0,r.top)+'px')}},{threshold:th}).observe(sen)}catch(e){}})();
+renderHome();
+</script>
+
+</body>
+</html>
