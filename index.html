@@ -70,7 +70,14 @@ h1 span{color:var(--work)}
 .legend .dot{width:8px;height:8px}
 /* storico e opzioni */
 .hist{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:12px 16px;background:var(--panel);border:1px solid var(--line);border-radius:12px}
-.hist .t{font-weight:600}
+.hist{position:relative;padding-right:52px}
+.hist .t{font-weight:600;overflow-wrap:anywhere}
+.hedit{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:40px;height:40px;border-radius:10px;color:var(--muted);display:flex;align-items:center;justify-content:center}
+.hedit svg{width:20px;height:20px}
+.hist.editing{display:flex;flex-direction:column;gap:10px;padding-right:16px}
+.hname{width:100%;box-sizing:border-box;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;color:var(--text);font:inherit;font-weight:600;font-size:1rem}
+.hname:focus{outline:2px solid var(--prep);outline-offset:0}
+.hbtns{display:flex;gap:8px}.hbtns .btn{flex:1;padding:10px 8px}
 .hist .d{font-family:var(--display);font-size:1.3rem;font-weight:600;font-variant-numeric:tabular-nums;text-align:right}
 .badge{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;font-weight:600}
 .ok{color:var(--rest)} .ko{color:var(--prep)}
@@ -300,6 +307,7 @@ function strip(el,t){el.innerHTML=segs(t).map(s=>`<i style="flex:${s.dur};backgr
 function summary(t){let s=`${sec(t.work)} lavoro`;if(t.rest)s+=` / ${sec(t.rest)} riposo`;s+=` × ${t.rounds}`;if(t.cycles>1)s+=` · ${t.cycles} cicli`;return s}
 
 /* ---------- home ---------- */
+let histEdit=null;
 function renderHome(){
   const L=$('#timers');
   L.innerHTML=S.timers.length?'':'<div class="empty">Nessun timer. Creane uno nuovo.</div>';
@@ -315,13 +323,29 @@ function renderHome(){
   });
   const H=$('#hist');
   H.innerHTML=S.history.length?'':'<div class="empty">Qui compariranno gli allenamenti svolti.</div>';
+  S.history.forEach(h=>{if(!h.id)h.id=uid()});
   S.history.slice().reverse().forEach(h=>{
     const d=new Date(h.at);
     const e=document.createElement('div');e.className='hist';
+    const when=`${d.toLocaleDateString('it-IT',{weekday:'short',day:'numeric',month:'short'})} · ${d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}`;
+    if(histEdit===h.id){
+      e.classList.add('editing');
+      e.innerHTML=`<input class="hname" id="hn-${h.id}" maxlength="40" aria-label="Nome attività">
+       <div class="hbtns"><button class="btn primary hs">Salva</button><button class="btn hc">Annulla</button><button class="btn danger hd">Elimina</button></div>`;
+      const inp=e.querySelector('input');inp.value=h.name;
+      const ok=()=>{h.name=inp.value.trim()||h.name;histEdit=null;save();renderHome()};
+      e.querySelector('.hs').onclick=ok;inp.onkeydown=ev=>{if(ev.key==='Enter')ok();if(ev.key==='Escape'){histEdit=null;renderHome()}};
+      e.querySelector('.hc').onclick=()=>{histEdit=null;renderHome()};
+      twoTap(e.querySelector('.hd'),'Conferma',()=>{S.history=S.history.filter(x=>x.id!==h.id);histEdit=null;save();renderHome()});
+      H.appendChild(e);setTimeout(()=>inp.focus(),0);return;
+    }
     e.innerHTML=`<span class="t"></span><span class="d">${fmt(h.done)}</span>
-     <span class="muted small">${d.toLocaleDateString('it-IT',{weekday:'short',day:'numeric',month:'short'})} · ${d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}</span>
-     <span class="badge ${h.complete?'ok':'ko'}">${h.complete?'Completato':'Interrotto'}</span>`;
-    e.querySelector('.t').textContent=h.name;H.appendChild(e);
+     <span class="muted small">${when}</span>
+     <span class="badge ${h.complete?'ok':'ko'}">${h.complete?'Completato':'Interrotto'}</span>
+     <button class="hedit" aria-label="Modifica o elimina"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>`;
+    e.querySelector('.t').textContent=h.name;
+    e.querySelector('.hedit').onclick=()=>{histEdit=h.id;renderHome()};
+    H.appendChild(e);
   });
   const O=$('#opts');O.innerHTML='';
   [['voice','Guida vocale'],['beep','Segnali acustici'],['flash','Lampeggio a cambio fase']].forEach(([k,l])=>{
