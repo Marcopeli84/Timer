@@ -150,6 +150,7 @@ h1 span{color:var(--work)}
 .chips button{padding:10px 14px;border-radius:20px;background:var(--panel2);border:1px solid var(--line);font-weight:600;font-variant-numeric:tabular-nums}
 .big.l7{font-size:min(22vw,calc(20*var(--u)),11rem)}
 .big small{font-size:.42em;opacity:.8}
+#run[data-ph="over"]{--ph:#1c1210;--fg:var(--work)}
 #run[data-ph="sw"]{--ph:var(--long);--fg:#fff}
 #run[data-mode="sw"] .bar,#run[data-mode="sw"] .rinfo,#run[data-mode="sw"] .counts,#run[data-mode="cd"] .counts{visibility:hidden}
 .laps{margin-top:10px;font-weight:600;font-variant-numeric:tabular-nums;display:flex;flex-direction:column;gap:2px;opacity:.9;max-height:calc(14*var(--u));overflow:hidden}
@@ -403,7 +404,8 @@ const el=()=>R.acc+(R.paused?0:now()-R.res);
 function seekTo(ms){R.acc=Math.max(0,ms);R.res=now();R.idx=-2;tick()}
 function tick(){
   if(!R)return;const e=el();
-  if(e>=R.tot)return finish(true);
+  if(e>=R.tot)return R.t.mode==='cd'?over(e):finish(true);
+  R.over=false;
   let i=R.st.length-1;while(i>0&&R.st[i]>e)i--;
   const s=R.sg[i],segEnd=R.st[i]+s.dur*1000,left=Math.ceil((segEnd-e)/1000);
   if(i!==R.idx){
@@ -418,6 +420,15 @@ function tick(){
     if(s.type==='work'&&s.dur>=30&&left===Math.floor(s.dur/2)&&s.dur%2===0)say('Metà')}
   draw(e,i,s,segEnd);
 }
+function over(e){
+  const x=e-R.tot,min=Math.floor(x/60000);
+  if(!R.over){R.over=true;R.ovMin=0;R.idx=0;beep(1320,.2,3);say('Tempo scaduto');flash()}
+  else if(min>R.ovMin){R.ovMin=min;beep(880,.15,2)}
+  $('#run').dataset.ph='over';$('#rPhase').textContent='Tempo extra';
+  setBig('+'+fmt(Math.floor(x/1000)));
+  $('#rNext').textContent='Totale '+fmt(Math.floor(e/1000));
+  $('#rBar').style.width='100%';$('#rEl').textContent=fmt(Math.floor(e/1000));$('#rLeft').textContent='+'+fmt(Math.floor(x/1000));
+}
 function draw(e,i,s,segEnd){
   const run=$('#run');run.dataset.ph=s.type;
   $('#rPhase').textContent=R.t.mode==='cd'&&s.type==='work'?'Tempo':PH[s.type];
@@ -430,8 +441,9 @@ function draw(e,i,s,segEnd){
 }
 function finish(complete){
   clearInterval(iv);if(!R)return;
-  const done=Math.min(el(),R.tot)/1000;
+  const done=(R.t.mode==='cd'?el():Math.min(el(),R.tot))/1000;complete=complete||!!R.over;
   if(done>=5){S.history.push({name:R.t.name,at:Date.now(),done:Math.round(done),complete});if(S.history.length>300)S.history.shift();save()}
+  if(complete&&R.t.mode==='cd'){R=null;closeRun();return}
   if(complete){beep(1320,.2,3);say(R.t.mode==='cd'?'Tempo scaduto':'Allenamento completato');flash();
     const run=$('#run');run.dataset.ph='done';$('#rPhase').textContent='Fatto!';$('#rTime').textContent=fmt(R.tot/1000);$('#rNext').textContent='Tocca ✕ per tornare ai timer';$('#rBar').style.width='100%';$('#rLeft').textContent='-0:00';
     R=null;exitArmed=true;$('#rStop').classList.remove('arm');$('#rStop').textContent='✕';renderHome();return}
@@ -459,7 +471,7 @@ function setMode(m){
   $('#run').dataset.mode=m;$('#rLaps').innerHTML='';
   $('#rPrev').innerHTML=m==='sw'?ICO.lap:ICO.prev;$('#rNextB').innerHTML=m==='sw'?ICO.reset:ICO.next;
   $('#rPrev').setAttribute('aria-label',m==='sw'?'Giro':m==='cd'?'Ricomincia':'Fase precedente');
-  $('#rNextB').setAttribute('aria-label',m==='sw'?'Azzera':m==='cd'?'Termina subito':'Fase successiva');
+  $('#rNextB').setAttribute('aria-label',m==='sw'?'Azzera':m==='cd'?'Vai a zero':'Fase successiva');
 }
 function setBig(txt,html){const b=$('#rTime');if(html)b.innerHTML=html;else b.textContent=txt;b.classList.toggle('l7',(txt||'').length>5)}
 let SW=null,swIv=null;
