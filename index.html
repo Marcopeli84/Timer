@@ -551,7 +551,8 @@ measure();addEventListener('resize',measure);addEventListener('orientationchange
 if(window.visualViewport)visualViewport.addEventListener('resize',measure);})();
 /* installazione come app */
 (function(){
-  if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+  if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(r=>{r.update();document.addEventListener('visibilitychange',()=>{if(!document.hidden)r.update()})}).catch(()=>{});
+    let had=!!navigator.serviceWorker.controller;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(had&&!R&&!SW)location.reload();had=true})}
   const standalone=matchMedia('(display-mode: standalone)').matches||navigator.standalone;
   let off=false;try{off=localStorage.getItem('inst_off')==='1'}catch(e){}
   if(standalone||off)return;
